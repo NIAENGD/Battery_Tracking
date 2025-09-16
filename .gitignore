@@ -1,0 +1,34 @@
+# .NET build artifacts
+bin/
+obj/
+[Bb]in/
+[Oo]bj/
+*.user
+*.rsuser
+*.suo
+*.cache
+*.pdb
+*.opendb
+*.log
+*.vs/
+TestResults/
+*.nupkg
+*.snupkg
+*.LocalHistory/
+GeneratedFiles/
+# Visual Studio cache/options
+.vscode/
+.vs/
+*.ide/
+# OS files
+.DS_Store
+Thumbs.db
+# Tooling
+artifacts/
+logs/
+# Packaging outputs
+*.msix
+*.msixupload
+*.appx
+*.appxbundle
+*.msixbundle
