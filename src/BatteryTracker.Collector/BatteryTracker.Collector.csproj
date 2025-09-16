@@ -10,7 +10,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.4" />
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.0.3" />
-    <PackageReference Include="Microsoft.Windows.SDK.Contracts" Version="10.0.22621.756" />
+    <PackageReference Include="Microsoft.Windows.SDK.NET.Ref" Version="10.0.22621.2428" />
     <PackageReference Include="Serilog" Version="3.1.1" />
     <PackageReference Include="Serilog.Extensions.Hosting" Version="7.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
