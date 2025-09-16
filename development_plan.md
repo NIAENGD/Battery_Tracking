@@ -117,6 +117,7 @@
    - Validate telemetry availability on target Snapdragon reference device.
    - Spike prototypes for ETW capture (`TraceEvent`/`Microsoft.Diagnostics.Tracing.TraceEvent`).
    - Decide on sampling intervals and confirm storage schema.
+   - ✅ Delivered in Phase 1 — see `docs/inception/inception-summary.md` for findings and prototypes.
 2. **Core collector (Weeks 2-4)**
    - Implement session manager, CPU & battery adapters.
    - Persist metrics to SQLite; implement CLI `start/stop/status`.
