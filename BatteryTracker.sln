@@ -10,6 +10,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BatteryTracker.Shared", "sr
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EtwEnergySpike", "prototypes\EtwEnergySpike\EtwEnergySpike.csproj", "{00CE7D7C-71D4-4AA5-9E1A-22D57BFB2057}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BatteryTracker.Cli", "src\BatteryTracker.Cli\BatteryTracker.Cli.csproj", "{C88AE886-631A-4F4F-B7FE-1A366EE0AC88}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BatteryTracker.Collector.Tests", "tests\BatteryTracker.Collector.Tests\BatteryTracker.Collector.Tests.csproj", "{FCFFDA26-88AE-4714-825B-D7CC74EC1A61}"
+EndProject
 Global
     GlobalSection(SolutionConfigurationPlatforms) = preSolution
         Debug|Any CPU = Debug|Any CPU
@@ -50,6 +54,22 @@ Global
         {00CE7D7C-71D4-4AA5-9E1A-22D57BFB2057}.Release|Any CPU.Build.0 = Release|Any CPU
         {00CE7D7C-71D4-4AA5-9E1A-22D57BFB2057}.Release|ARM64.ActiveCfg = Release|ARM64
         {00CE7D7C-71D4-4AA5-9E1A-22D57BFB2057}.Release|ARM64.Build.0 = Release|ARM64
+        {C88AE886-631A-4F4F-B7FE-1A366EE0AC88}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+        {C88AE886-631A-4F4F-B7FE-1A366EE0AC88}.Debug|Any CPU.Build.0 = Debug|Any CPU
+        {C88AE886-631A-4F4F-B7FE-1A366EE0AC88}.Debug|ARM64.ActiveCfg = Debug|ARM64
+        {C88AE886-631A-4F4F-B7FE-1A366EE0AC88}.Debug|ARM64.Build.0 = Debug|ARM64
+        {C88AE886-631A-4F4F-B7FE-1A366EE0AC88}.Release|Any CPU.ActiveCfg = Release|Any CPU
+        {C88AE886-631A-4F4F-B7FE-1A366EE0AC88}.Release|Any CPU.Build.0 = Release|Any CPU
+        {C88AE886-631A-4F4F-B7FE-1A366EE0AC88}.Release|ARM64.ActiveCfg = Release|ARM64
+        {C88AE886-631A-4F4F-B7FE-1A366EE0AC88}.Release|ARM64.Build.0 = Release|ARM64
+        {FCFFDA26-88AE-4714-825B-D7CC74EC1A61}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+        {FCFFDA26-88AE-4714-825B-D7CC74EC1A61}.Debug|Any CPU.Build.0 = Debug|Any CPU
+        {FCFFDA26-88AE-4714-825B-D7CC74EC1A61}.Debug|ARM64.ActiveCfg = Debug|ARM64
+        {FCFFDA26-88AE-4714-825B-D7CC74EC1A61}.Debug|ARM64.Build.0 = Debug|ARM64
+        {FCFFDA26-88AE-4714-825B-D7CC74EC1A61}.Release|Any CPU.ActiveCfg = Release|Any CPU
+        {FCFFDA26-88AE-4714-825B-D7CC74EC1A61}.Release|Any CPU.Build.0 = Release|Any CPU
+        {FCFFDA26-88AE-4714-825B-D7CC74EC1A61}.Release|ARM64.ActiveCfg = Release|ARM64
+        {FCFFDA26-88AE-4714-825B-D7CC74EC1A61}.Release|ARM64.Build.0 = Release|ARM64
     EndGlobalSection
     GlobalSection(SolutionProperties) = preSolution
         HideSolutionNode = FALSE
