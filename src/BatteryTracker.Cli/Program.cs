@@ -1,7 +1,11 @@
+using System.Collections.Generic;
 using System.CommandLine;
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using BatteryTracker.Collector.Sessions;
+using BatteryTracker.Shared.Sessions;
+using Microsoft.Data.Sqlite;
 
 var rootCommand = BuildRootCommand();
 return await rootCommand.InvokeAsync(args).ConfigureAwait(false);
@@ -28,9 +32,17 @@ static RootCommand BuildRootCommand()
     var statusCommand = new Command("status", "Display the status of the collector and the most recent session.");
     statusCommand.SetHandler(StatusAsync, dataDirectoryOption);
 
+    var selfTestCommand = new Command("selftest", "Run a diagnostics session that validates core and extended telemetry.");
+    var outputOption = new Option<FileInfo?>("--output", description: "Optional path for the diagnostics summary log.");
+    var selfTestDurationOption = new Option<TimeSpan>("--duration", () => TimeSpan.FromSeconds(20), "Duration of the diagnostics capture.");
+    selfTestCommand.AddOption(outputOption);
+    selfTestCommand.AddOption(selfTestDurationOption);
+    selfTestCommand.SetHandler(SelfTestAsync, dataDirectoryOption, outputOption, selfTestDurationOption);
+
     root.AddCommand(startCommand);
     root.AddCommand(stopCommand);
     root.AddCommand(statusCommand);
+    root.AddCommand(selfTestCommand);
     return root;
 }
 
@@ -174,6 +186,125 @@ static async Task StatusAsync(DirectoryInfo dataDirectory)
         Console.Error.WriteLine($"Unable to read collector session state: {ex.Message}");
     }
 }
+
+static async Task SelfTestAsync(DirectoryInfo dataDirectory, FileInfo? output, TimeSpan duration)
+{
+    if (duration <= TimeSpan.Zero)
+    {
+        duration = TimeSpan.FromSeconds(20);
+    }
+
+    Directory.CreateDirectory(dataDirectory.FullName);
+    var timestamp = DateTimeOffset.UtcNow.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture);
+    var runDirectory = Path.Combine(dataDirectory.FullName, $"selftest-{timestamp}");
+    Directory.CreateDirectory(runDirectory);
+
+    var logPath = output?.FullName ?? Path.Combine(runDirectory, $"selftest-{timestamp}.log");
+    var logDirectory = Path.GetDirectoryName(logPath);
+    if (!string.IsNullOrWhiteSpace(logDirectory))
+    {
+        Directory.CreateDirectory(logDirectory);
+    }
+
+    await using var host = CollectorHost.CreateDefault(runDirectory);
+    await using var logStream = new StreamWriter(File.Open(logPath, FileMode.Create, FileAccess.Write, FileShare.Read));
+    logStream.AutoFlush = true;
+
+    void Log(string message)
+    {
+        var stamp = DateTimeOffset.Now.ToString("u", CultureInfo.InvariantCulture);
+        var formatted = $"[{stamp}] {message}";
+        Console.WriteLine(formatted);
+        logStream.WriteLine(formatted);
+    }
+
+    Log($"Starting telemetry self-test for {duration:c}. Data captured in {runDirectory}.");
+
+    SessionMetadata? session = null;
+    try
+    {
+        session = await host.StartSessionAsync("Telemetry self-test diagnostics").ConfigureAwait(false);
+        Log($"Session {session.SessionId} started at {session.StartedAt:O}.");
+        await Task.Delay(duration).ConfigureAwait(false);
+    }
+    finally
+    {
+        if (session is not null)
+        {
+            try
+            {
+                await host.StopSessionAsync().ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                Log($"Failed to stop telemetry session cleanly: {ex.Message}");
+                throw;
+            }
+
+            Log($"Session {session.SessionId} stopped at {session.CompletedAt:O}.");
+        }
+    }
+
+    if (session is not null)
+    {
+        var databasePath = Path.Combine(runDirectory, "battery-tracker.db");
+        var summaries = await ReadMetricSummariesAsync(databasePath, session.SessionId).ConfigureAwait(false);
+        if (summaries.Count == 0)
+        {
+            Log("No telemetry samples were captured during the self-test run.");
+        }
+        else
+        {
+            Log("Telemetry summary (component/metric):");
+            foreach (var summary in summaries)
+            {
+                Log($"  {summary.Component} :: {summary.Metric} -> count={summary.Count}, min={summary.Min:F2}, max={summary.Max:F2}, avg={summary.Average:F2}");
+            }
+        }
+
+        var collectorLog = Path.Combine(runDirectory, "logs", "collector.log");
+        Log($"Collector log: {collectorLog}");
+    }
+
+    Log($"Diagnostics summary saved to {logPath}.");
+}
+
+static async Task<IReadOnlyList<MetricSummary>> ReadMetricSummariesAsync(string databasePath, Guid sessionId)
+{
+    var summaries = new List<MetricSummary>();
+    if (!File.Exists(databasePath))
+    {
+        return summaries;
+    }
+
+    await using var connection = new SqliteConnection($"Data Source={databasePath}");
+    await connection.OpenAsync().ConfigureAwait(false);
+
+    await using var command = connection.CreateCommand();
+    command.CommandText = @"
+SELECT component, metric_type, COUNT(*) AS count, MIN(value), MAX(value), AVG(value)
+FROM metrics
+WHERE session_id = $sessionId
+GROUP BY component, metric_type
+ORDER BY component, metric_type;";
+    command.Parameters.AddWithValue("$sessionId", sessionId.ToString());
+
+    await using var reader = await command.ExecuteReaderAsync().ConfigureAwait(false);
+    while (await reader.ReadAsync().ConfigureAwait(false))
+    {
+        var component = reader.GetString(0);
+        var metric = reader.GetString(1);
+        var count = reader.GetInt64(2);
+        var min = !reader.IsDBNull(3) ? reader.GetDouble(3) : double.NaN;
+        var max = !reader.IsDBNull(4) ? reader.GetDouble(4) : double.NaN;
+        var average = !reader.IsDBNull(5) ? reader.GetDouble(5) : double.NaN;
+        summaries.Add(new MetricSummary(component, metric, count, min, max, average));
+    }
+
+    return summaries;
+}
+
+private sealed record MetricSummary(string Component, string Metric, long Count, double Min, double Max, double Average);
 
 static async Task WaitForStopSignalAsync(EventWaitHandle stopSignal, CancellationToken cancellationToken)
 {

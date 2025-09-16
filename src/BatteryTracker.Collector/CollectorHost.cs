@@ -48,6 +48,9 @@ public sealed class CollectorHost : IAsyncDisposable
         {
             new AggregateBatterySensor(log),
             new CpuPerformanceSensor(log),
+            new GpuEngineSensor(log),
+            new DisplayBrightnessSensor(log),
+            new WirelessThroughputSensor(log),
         };
         var sessionManager = new CollectorSessionManager(samplingPolicy, pipeline, adapters, log);
         return new CollectorHost(storage, pipeline, sessionManager, log, ownsLogger ? log : logger as IDisposable);

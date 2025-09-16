@@ -15,5 +15,6 @@ public enum TelemetryMetric
     TemperatureCelsius,
     EnergyConsumedMilliwattHours,
     FrequencyMHz,
+    BrightnessPercent,
     ThroughputMbps,
 }
