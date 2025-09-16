@@ -8,8 +8,11 @@ Battery Tracking is a Windows App SDK (WinUI 3) solution targeting Windows-on-AR
 BatteryTracker.sln
 ├── src/
 │   ├── BatteryTracker.App/               # WinUI 3 dashboard shell (net8.0-windows)
+│   ├── BatteryTracker.Cli/               # System.CommandLine host for start/stop/status control
 │   ├── BatteryTracker.Collector/         # Collector service primitives (sessions, storage, sensors)
 │   └── BatteryTracker.Shared/            # Cross-cutting models, configuration, telemetry contracts
+├── tests/
+│   └── BatteryTracker.Collector.Tests/   # Integration tests with mocked sensor adapters
 ├── prototypes/
 │   └── EtwEnergySpike/                   # TraceEvent spike that validates ETW energy providers
 └── docs/
@@ -23,6 +26,12 @@ BatteryTracker.sln
 - ✅ Established SQLite schema and ingestion pipeline for metrics and session metadata.
 - ✅ Added a WinUI 3 dashboard to exercise collector start/stop flows.
 - ✅ Captured findings, sampling policy, and open risks in `docs/inception/inception-summary.md`.
+
+## Phase 2 (Core collector) highlights
+
+- ✅ Introduced a `CpuPerformanceSensor` that samples Windows performance counters for utilization and frequency telemetry.
+- ✅ Delivered a verb-based CLI (`BatteryTracker.Cli`) that can start, stop, and inspect collector sessions from a terminal.
+- ✅ Added an integration test harness that validates session persistence with mocked sensor adapters.
 
 ## Getting started (Windows on ARM)
 
@@ -42,6 +51,21 @@ BatteryTracker.sln
    dotnet run --project prototypes/EtwEnergySpike/EtwEnergySpike.csproj
    ```
 
+## Command-line collector usage
+
+The CLI defaults to `%LOCALAPPDATA%\BatteryTracker` for data, logs, and session state. All commands accept `--data-directory` to override the location.
+
+```powershell
+# Start a new session, optionally attaching notes and an automatic stop timer.
+batterytracker start --notes "Perf sweep" --duration 00:10:00
+
+# Signal the currently running collector to flush and exit.
+batterytracker stop
+
+# Show whether the collector is running and summarize the most recent session.
+batterytracker status
+```
+
 ## Next steps
 
-Phase 2 (Core collector) will extend the collector with CPU/GPU adapters, integrate a verb-based CLI, and surface richer diagnostics through the UI.
+Phase 3 will focus on GPU/display/wireless adapters, richer diagnostics in the dashboard, and extending the reporting pipeline (PDF/visualizations).

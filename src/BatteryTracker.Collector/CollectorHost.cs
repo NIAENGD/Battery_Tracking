@@ -47,6 +47,7 @@ public sealed class CollectorHost : IAsyncDisposable
         var adapters = new List<ISensorAdapter>
         {
             new AggregateBatterySensor(log),
+            new CpuPerformanceSensor(log),
         };
         var sessionManager = new CollectorSessionManager(samplingPolicy, pipeline, adapters, log);
         return new CollectorHost(storage, pipeline, sessionManager, log, ownsLogger ? log : logger as IDisposable);
