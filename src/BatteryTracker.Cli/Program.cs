@@ -451,16 +451,3 @@ static string GetStopSignalName(string dataDirectory)
     return $"Local\\BatteryTracker.StopSignal.{token}";
 }
 
-private sealed record MetricSummary(string Component, string Metric, long Count, double Min, double Max, double Average);
-
-private sealed record PowerBreakdown(
-    double SocTotalMilliwatts,
-    double? CpuMilliwatts,
-    double? GpuMilliwatts,
-    double? DisplayMilliwatts,
-    double? MotherboardMilliwatts)
-{
-    public static PowerBreakdown Empty { get; } = new(double.NaN, null, null, null, null);
-
-    public bool HasAnyData => !double.IsNaN(SocTotalMilliwatts);
-}
