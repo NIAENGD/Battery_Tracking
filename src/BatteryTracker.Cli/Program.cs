@@ -3,6 +3,7 @@ using System.CommandLine;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
+using BatteryTracker.Cli;
 using BatteryTracker.Collector.Sessions;
 using BatteryTracker.Shared.Sessions;
 using Microsoft.Data.Sqlite;
@@ -303,8 +304,6 @@ ORDER BY component, metric_type;";
 
     return summaries;
 }
-
-private sealed record MetricSummary(string Component, string Metric, long Count, double Min, double Max, double Average);
 
 static async Task WaitForStopSignalAsync(EventWaitHandle stopSignal, CancellationToken cancellationToken)
 {
