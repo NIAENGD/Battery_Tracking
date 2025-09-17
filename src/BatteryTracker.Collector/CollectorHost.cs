@@ -53,7 +53,8 @@ public sealed class CollectorHost : IAsyncDisposable
             new WirelessThroughputSensor(log),
         };
         var sessionManager = new CollectorSessionManager(samplingPolicy, pipeline, adapters, log);
-        return new CollectorHost(storage, pipeline, sessionManager, log, ownsLogger ? log : logger as IDisposable);
+        var loggerLifetime = ownsLogger ? log as IDisposable : logger as IDisposable;
+        return new CollectorHost(storage, pipeline, sessionManager, log, loggerLifetime);
     }
 
     public SessionMetadata? ActiveSession => _sessionManager.ActiveSession;
