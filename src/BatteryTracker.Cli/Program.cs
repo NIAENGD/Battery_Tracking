@@ -1,11 +1,14 @@
+using System;
 using System.Collections.Generic;
 using System.CommandLine;
 using System.Globalization;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using BatteryTracker.Cli;
 using BatteryTracker.Collector.Sessions;
 using BatteryTracker.Shared.Sessions;
+using BatteryTracker.Shared.Telemetry;
 using Microsoft.Data.Sqlite;
 
 var rootCommand = BuildRootCommand();
@@ -263,6 +266,21 @@ static async Task SelfTestAsync(DirectoryInfo dataDirectory, FileInfo? output, T
             }
         }
 
+        var powerBreakdown = await ReadPowerBreakdownAsync(databasePath, session.SessionId).ConfigureAwait(false);
+        if (powerBreakdown.HasAnyData)
+        {
+            Log("Power breakdown (average mW):");
+            Log($"  SoC Total:      {FormatPower(powerBreakdown.SocTotalMilliwatts)}");
+            Log($"  CPU:            {FormatPower(powerBreakdown.CpuMilliwatts)}");
+            Log($"  GPU:            {FormatPower(powerBreakdown.GpuMilliwatts)}");
+            Log($"  Screen:         {FormatPower(powerBreakdown.DisplayMilliwatts)}");
+            Log($"  Motherboard/IO: {FormatPower(powerBreakdown.MotherboardMilliwatts)}");
+        }
+        else
+        {
+            Log("No component power telemetry was captured (PowerMilliwatts samples missing).");
+        }
+
         var collectorLog = Path.Combine(runDirectory, "logs", "collector.log");
         Log($"Collector log: {collectorLog}");
     }
@@ -305,6 +323,98 @@ ORDER BY component, metric_type;";
     return summaries;
 }
 
+static async Task<PowerBreakdown> ReadPowerBreakdownAsync(string databasePath, Guid sessionId)
+{
+    if (!File.Exists(databasePath))
+    {
+        return PowerBreakdown.Empty;
+    }
+
+    await using var connection = new SqliteConnection($"Data Source={databasePath}");
+    await connection.OpenAsync().ConfigureAwait(false);
+
+    var powerByComponent = new Dictionary<string, double>(StringComparer.OrdinalIgnoreCase);
+    await using var command = connection.CreateCommand();
+    command.CommandText = @"
+SELECT component, AVG(value) AS avg_value
+FROM metrics
+WHERE session_id = $sessionId
+  AND metric_type = $metric
+  AND (subcomponent IS NULL OR TRIM(subcomponent) = '')
+GROUP BY component;";
+    command.Parameters.AddWithValue("$sessionId", sessionId.ToString());
+    command.Parameters.AddWithValue("$metric", TelemetryMetric.PowerMilliwatts.ToString());
+
+    await using (var reader = await command.ExecuteReaderAsync().ConfigureAwait(false))
+    {
+        while (await reader.ReadAsync().ConfigureAwait(false))
+        {
+            var component = reader.GetString(0);
+            var average = reader.IsDBNull(1) ? double.NaN : reader.GetDouble(1);
+            if (!double.IsNaN(average))
+            {
+                powerByComponent[component] = average;
+            }
+        }
+    }
+
+    if (powerByComponent.Count == 0)
+    {
+        return PowerBreakdown.Empty;
+    }
+
+    static bool IsIncludedInSoc(string component)
+        => !string.Equals(component, TelemetryComponent.Battery, StringComparison.OrdinalIgnoreCase);
+
+    var filtered = powerByComponent
+        .Where(pair => IsIncludedInSoc(pair.Key))
+        .ToDictionary(pair => pair.Key, pair => pair.Value, StringComparer.OrdinalIgnoreCase);
+
+    if (filtered.Count == 0)
+    {
+        return PowerBreakdown.Empty;
+    }
+
+    var socTotal = filtered.Values.Sum();
+
+    double? TryGet(string component)
+        => filtered.TryGetValue(component, out var value) ? value : null;
+
+    var cpu = TryGet(TelemetryComponent.Cpu);
+    var gpu = TryGet(TelemetryComponent.Gpu);
+    var display = TryGet(TelemetryComponent.Display);
+
+    var motherboard = socTotal;
+    if (cpu.HasValue)
+    {
+        motherboard -= cpu.Value;
+    }
+
+    if (gpu.HasValue)
+    {
+        motherboard -= gpu.Value;
+    }
+
+    if (display.HasValue)
+    {
+        motherboard -= display.Value;
+    }
+
+    motherboard = Math.Max(0, motherboard);
+
+    var motherboardValue = filtered.Count > 1 || motherboard > 0 ? motherboard : (double?)null;
+
+    return new PowerBreakdown(
+        socTotal,
+        cpu,
+        gpu,
+        display,
+        motherboardValue);
+}
+
+static string FormatPower(double? value)
+    => value.HasValue ? $"{value.Value:F0} mW" : "unavailable";
+
 static async Task WaitForStopSignalAsync(EventWaitHandle stopSignal, CancellationToken cancellationToken)
 {
     var completionSource = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -339,4 +449,18 @@ static string GetStopSignalName(string dataDirectory)
     var hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(normalized));
     var token = Convert.ToHexString(hash.AsSpan(0, 8));
     return $"Local\\BatteryTracker.StopSignal.{token}";
+}
+
+private sealed record MetricSummary(string Component, string Metric, long Count, double Min, double Max, double Average);
+
+private sealed record PowerBreakdown(
+    double SocTotalMilliwatts,
+    double? CpuMilliwatts,
+    double? GpuMilliwatts,
+    double? DisplayMilliwatts,
+    double? MotherboardMilliwatts)
+{
+    public static PowerBreakdown Empty { get; } = new(double.NaN, null, null, null, null);
+
+    public bool HasAnyData => !double.IsNaN(SocTotalMilliwatts);
 }
