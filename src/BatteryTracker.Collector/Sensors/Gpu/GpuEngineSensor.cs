@@ -46,12 +46,12 @@ public sealed class GpuEngineSensor : ISensorAdapter, IAsyncDisposable
         return Task.CompletedTask;
     }
 
-    public async Task StopAsync()
+    public Task StopAsync()
     {
         _cts?.Cancel();
         if (_timer is not null)
         {
-            await _timer.DisposeAsync().ConfigureAwait(false);
+            _timer.Dispose();
             _timer = null;
         }
 
@@ -60,6 +60,7 @@ public sealed class GpuEngineSensor : ISensorAdapter, IAsyncDisposable
 
         DisposeCounters();
         _channel.Writer.TryComplete();
+        return Task.CompletedTask;
     }
 
     public IAsyncEnumerable<MetricSample> ReadSamplesAsync(CancellationToken cancellationToken)
@@ -92,7 +93,7 @@ public sealed class GpuEngineSensor : ISensorAdapter, IAsyncDisposable
                         Math.Clamp(value, 0, 100),
                         "%",
                         counter.Source,
-                        confidence: 0.8));
+                        0.8));
                 }
 
                 if (utilizationSnapshots.Count > 0)
@@ -105,7 +106,7 @@ public sealed class GpuEngineSensor : ISensorAdapter, IAsyncDisposable
                         Math.Clamp(utilizationSnapshots.Average(), 0, 100),
                         "%",
                         "PDH (GPU Engine)",
-                        confidence: 0.7));
+                        0.7));
                 }
 
                 if (_powerCounters.Count > 0)
@@ -128,7 +129,7 @@ public sealed class GpuEngineSensor : ISensorAdapter, IAsyncDisposable
                             value,
                             "mW",
                             counter.Source,
-                            confidence: 0.6));
+                            0.6));
                     }
 
                     if (totalPower > 0)
@@ -141,7 +142,7 @@ public sealed class GpuEngineSensor : ISensorAdapter, IAsyncDisposable
                             totalPower,
                             "mW",
                             "PDH (GPU Adapter)",
-                            confidence: 0.6));
+                            0.6));
                     }
                 }
 

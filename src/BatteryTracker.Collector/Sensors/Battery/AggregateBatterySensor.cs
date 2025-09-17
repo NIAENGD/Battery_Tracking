@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Channels;
@@ -17,7 +18,7 @@ public sealed class AggregateBatterySensor : ISensorAdapter, IAsyncDisposable
 {
     private readonly ILogger _logger;
     private Channel<MetricSample> _channel;
-    private readonly AggregateBattery _battery;
+    private readonly Battery _battery;
     private PeriodicTimer? _timer;
     private CancellationTokenSource? _cts;
 
@@ -25,7 +26,7 @@ public sealed class AggregateBatterySensor : ISensorAdapter, IAsyncDisposable
     {
         _logger = logger.ForContext<AggregateBatterySensor>();
         _channel = Channel.CreateUnbounded<MetricSample>();
-        _battery = AggregateBattery.GetDefault();
+        _battery = Battery.AggregateBattery;
     }
 
     public Task StartAsync(SessionMetadata session, SamplingPolicy policy, CancellationToken cancellationToken)
@@ -37,18 +38,19 @@ public sealed class AggregateBatterySensor : ISensorAdapter, IAsyncDisposable
         return Task.CompletedTask;
     }
 
-    public async Task StopAsync()
+    public Task StopAsync()
     {
         _cts?.Cancel();
         if (_timer is not null)
         {
-            await _timer.DisposeAsync().ConfigureAwait(false);
+            _timer.Dispose();
             _timer = null;
         }
 
         _cts?.Dispose();
         _cts = null;
         _channel.Writer.TryComplete();
+        return Task.CompletedTask;
     }
 
     public IAsyncEnumerable<MetricSample> ReadSamplesAsync(CancellationToken cancellationToken)
@@ -66,7 +68,6 @@ public sealed class AggregateBatterySensor : ISensorAdapter, IAsyncDisposable
                 {
                     new(now, TelemetryComponent.Battery, null, TelemetryMetric.RemainingCapacityMilliwattHours, report.RemainingCapacityInMilliwattHours ?? 0, "mWh", "Windows.Devices.Power"),
                     new(now, TelemetryComponent.Battery, null, TelemetryMetric.FullChargeCapacityMilliwattHours, report.FullChargeCapacityInMilliwattHours ?? 0, "mWh", "Windows.Devices.Power"),
-                    new(now, TelemetryComponent.Battery, null, TelemetryMetric.VoltageMillivolts, report.VoltageInMillivolts ?? 0, "mV", "Windows.Devices.Power"),
                 };
 
                 foreach (var sample in samples)

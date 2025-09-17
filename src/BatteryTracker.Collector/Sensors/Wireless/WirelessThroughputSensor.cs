@@ -34,18 +34,19 @@ public sealed class WirelessThroughputSensor : ISensorAdapter
         return Task.CompletedTask;
     }
 
-    public async Task StopAsync()
+    public Task StopAsync()
     {
         _cts?.Cancel();
         if (_timer is not null)
         {
-            await _timer.DisposeAsync().ConfigureAwait(false);
+            _timer.Dispose();
             _timer = null;
         }
 
         _cts?.Dispose();
         _cts = null;
         _channel.Writer.TryComplete();
+        return Task.CompletedTask;
     }
 
     public IAsyncEnumerable<MetricSample> ReadSamplesAsync(CancellationToken cancellationToken)
@@ -101,12 +102,12 @@ public sealed class WirelessThroughputSensor : ISensorAdapter
                         ? double.NaN
                         : Math.Clamp((rxMbps + txMbps) / linkSpeedMbps * 100d, 0d, 100d);
 
-                    samples.Add(new MetricSample(now, TelemetryComponent.Wireless, @interface.Name + " (Rx)", TelemetryMetric.ThroughputMbps, rxMbps, "Mbps", "NetworkInterface", confidence: 0.6));
-                    samples.Add(new MetricSample(now, TelemetryComponent.Wireless, @interface.Name + " (Tx)", TelemetryMetric.ThroughputMbps, txMbps, "Mbps", "NetworkInterface", confidence: 0.6));
+                    samples.Add(new MetricSample(now, TelemetryComponent.Wireless, @interface.Name + " (Rx)", TelemetryMetric.ThroughputMbps, rxMbps, "Mbps", "NetworkInterface", 0.6));
+                    samples.Add(new MetricSample(now, TelemetryComponent.Wireless, @interface.Name + " (Tx)", TelemetryMetric.ThroughputMbps, txMbps, "Mbps", "NetworkInterface", 0.6));
 
                     if (!double.IsNaN(utilization))
                     {
-                        samples.Add(new MetricSample(now, TelemetryComponent.Wireless, @interface.Name, TelemetryMetric.UtilizationPercent, utilization, "%", "NetworkInterface", confidence: 0.5));
+                        samples.Add(new MetricSample(now, TelemetryComponent.Wireless, @interface.Name, TelemetryMetric.UtilizationPercent, utilization, "%", "NetworkInterface", 0.5));
                     }
 
                     _previousSnapshots[@interface.Id] = new InterfaceSnapshot(statistics.BytesSent, statistics.BytesReceived, now);
@@ -137,7 +138,7 @@ public sealed class WirelessThroughputSensor : ISensorAdapter
         }
     }
 
-    private static IPInterfaceStatistics? SafeGetStatistics(NetworkInterface @interface)
+    private static IPv4InterfaceStatistics? SafeGetStatistics(NetworkInterface @interface)
     {
         try
         {

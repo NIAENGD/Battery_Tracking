@@ -44,12 +44,12 @@ public sealed class CpuPerformanceSensor : ISensorAdapter
         return Task.CompletedTask;
     }
 
-    public async Task StopAsync()
+    public Task StopAsync()
     {
         _cts?.Cancel();
         if (_timer is not null)
         {
-            await _timer.DisposeAsync().ConfigureAwait(false);
+            _timer.Dispose();
             _timer = null;
         }
 
@@ -57,6 +57,7 @@ public sealed class CpuPerformanceSensor : ISensorAdapter
         _cts = null;
         DisposeCounters();
         _channel.Writer.TryComplete();
+        return Task.CompletedTask;
     }
 
     public IAsyncEnumerable<MetricSample> ReadSamplesAsync(CancellationToken cancellationToken)

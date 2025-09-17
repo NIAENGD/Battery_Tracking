@@ -39,18 +39,19 @@ public sealed class DisplayBrightnessSensor : ISensorAdapter, IAsyncDisposable
         return Task.CompletedTask;
     }
 
-    public async Task StopAsync()
+    public Task StopAsync()
     {
         _cts?.Cancel();
         if (_timer is not null)
         {
-            await _timer.DisposeAsync().ConfigureAwait(false);
+            _timer.Dispose();
             _timer = null;
         }
 
         _cts?.Dispose();
         _cts = null;
         _channel.Writer.TryComplete();
+        return Task.CompletedTask;
     }
 
     public IAsyncEnumerable<MetricSample> ReadSamplesAsync(CancellationToken cancellationToken)
@@ -71,8 +72,8 @@ public sealed class DisplayBrightnessSensor : ISensorAdapter, IAsyncDisposable
                 var estimatedPower = brightnessPercent / 100d * NominalPanelPowerMilliwatts;
                 var samples = new[]
                 {
-                    new MetricSample(now, TelemetryComponent.Display, null, TelemetryMetric.BrightnessPercent, brightnessPercent, "%", "WMI", confidence: 0.7),
-                    new MetricSample(now, TelemetryComponent.Display, null, TelemetryMetric.PowerMilliwatts, estimatedPower, "mW", "PanelModel", confidence: 0.5),
+                    new MetricSample(now, TelemetryComponent.Display, null, TelemetryMetric.BrightnessPercent, brightnessPercent, "%", "WMI", 0.7),
+                    new MetricSample(now, TelemetryComponent.Display, null, TelemetryMetric.PowerMilliwatts, estimatedPower, "mW", "PanelModel", 0.5),
                 };
 
                 foreach (var sample in samples)

@@ -4,5 +4,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <LangVersion>latest</LangVersion>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <WindowsSdkPackageVersion>10.0.22621.57</WindowsSdkPackageVersion>
   </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Update="Microsoft.Windows.SDK.NET.Ref" Version="10.0.22621.57" />
+  </ItemGroup>
 </Project>
